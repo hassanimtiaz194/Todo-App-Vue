@@ -1,10 +1,32 @@
 <script setup>
 import { Icon } from "@iconify/vue";
-import { ref } from 'vue';
+import { ref, watch, computed } from 'vue';
 import { uid } from 'uid';
 import TodoCreator from '../components/TodoCreator.vue';
 import TodoItem from '../components/TodoItem.vue';
 const todoList = ref([]);
+
+// watch if todoList get updated deep property watches data inside todoList must be set true
+watch(todoList, () => {
+  setTodoListLocalStorage();
+}, { deep: true })
+
+const fetchTodoList = () => {
+  const savedTodoList = JSON.parse(localStorage.getItem('todoList'));
+  if (savedTodoList) todoList.value = savedTodoList;
+}
+
+// automatically track reactive deps
+const todosCompleted =  computed (() => {
+  return todoList.value.every((todo) => todo.isCompleted );
+})
+
+// each time this page execute this fucntion will execute
+fetchTodoList();
+
+const setTodoListLocalStorage = () => {
+  localStorage.setItem('todoList', JSON.stringify(todoList.value));
+}
 
 const createTodo = (todo) => {
   console.log(todo);
@@ -17,6 +39,18 @@ const createTodo = (todo) => {
   });
 }
 console.log(todoList);
+const toggleTodoComplete = (todoPos) => {
+  todoList.value[todoPos].isCompleted = !todoList.value[todoPos].isCompleted;
+}
+const todoEditClicked = (todoPos) => {
+  todoList.value[todoPos].isEditing = !todoList.value[todoPos].isEditing;
+}
+const deleteTodo = (todoId) => {
+  todoList.value = todoList.value.filter(todo => todo.id !== todoId)
+}
+const updateTodo = (todoValue, todoPos) => {
+  todoList.value[todoPos].todo = todoValue;
+}
 </script>
 
 <template>
@@ -24,7 +58,8 @@ console.log(todoList);
     <h1>Create Todo</h1>
     <TodoCreator @create-todo="createTodo" />
     <ul class="todo-list" v-if="todoList.length !== 0">
-      <TodoItem v-for="todo in todoList" :todo="todo" />
+      <TodoItem v-for="(todo, index) in todoList" :todo="todo" :index="index" @toggle-complete="toggleTodoComplete"
+        @edit-todo="todoEditClicked" @delete-todo="deleteTodo" @update-todo="updateTodo" />
     </ul>
     <p v-else class="todos-msg">
       <Icon icon="noto-v1:sad-but-relieved-face" />
